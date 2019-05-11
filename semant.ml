@@ -41,7 +41,9 @@ let check (globals, functions) =
     in List.fold_left add_bind StringMap.empty [ ("print", Int);
 			                         ("printb", Bool);
 			                         ("printf", Float);
-			                         ("printbig", Int) ]
+			                         ("printbig", Int);
+						 ("printc", Char);
+						 ("prints", String)]
   in
 
   (* Add function name to symbol table *)
@@ -95,6 +97,15 @@ let check (globals, functions) =
         Literal  l -> (Int, SLiteral l)
       | Fliteral l -> (Float, SFliteral l)
       | BoolLit l  -> (Bool, SBoolLit l)
+      | CharLit l -> (Char, SCharLit l)
+      | StringLit l -> (String, SStringLit l)
+      | VecLit el -> 
+	  let check_vec e = 
+		let (et, e') = expr e in
+		let err = "vector type must be float, but has type " ^ string_of_typ et
+		in if et == Float then (et, e') else raise (Failure err) in
+	  let vec' = List.map check_vec el
+	  in (Vector, SVecLit vec')
       | Noexpr     -> (Void, SNoexpr)
       | Id s       -> (type_of_identifier s, SId s)
       | Assign(var, e) as ex -> 
@@ -119,8 +130,8 @@ let check (globals, functions) =
           let same = t1 = t2 in
           (* Determine expression type based on operator and operand types *)
           let ty = match op with
-            Add | Sub | Mult | Div when same && t1 = Int   -> Int
-          | Add | Sub | Mult | Div when same && t1 = Float -> Float
+            Add | Sub | Mult | Div | Mod when same && t1 = Int   -> Int
+          | Add | Sub | Mult | Div | Mod when same && t1 = Float -> Float
           | Equal | Neq            when same               -> Bool
           | Less | Leq | Greater | Geq
                      when same && (t1 = Int || t1 = Float) -> Bool

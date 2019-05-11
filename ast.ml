@@ -1,11 +1,10 @@
 (* Abstract Syntax Tree and functions for printing it *)
 
-type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
-          And | Or
+type op = Add | Sub | Mult | Div | Mod | Equal | Neq | Less | Leq | Greater | Geq | And | Or
 
 type uop = Neg | Not
 
-type typ = Int | Bool | Float | Void
+type typ = Int | Bool | Float | Void | Char | String | Vector
 
 type bind = typ * string
 
@@ -13,7 +12,11 @@ type expr =
     Literal of int
   | Fliteral of string
   | BoolLit of bool
+  | CharLit of char
+  | StringLit of string
   | Id of string
+  (* | Array of expr list *)
+  | VecLit of expr list
   | Binop of expr * op * expr
   | Unop of uop * expr
   | Assign of string * expr
@@ -45,6 +48,7 @@ let string_of_op = function
   | Sub -> "-"
   | Mult -> "*"
   | Div -> "/"
+  | Mod -> "%"
   | Equal -> "=="
   | Neq -> "!="
   | Less -> "<"
@@ -63,7 +67,11 @@ let rec string_of_expr = function
   | Fliteral(l) -> l
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
+  | CharLit(l) -> String.make 1 l
+  | StringLit(l) -> l
   | Id(s) -> s
+  | VecLit(el) -> "{" ^ String.concat ", " (List.map string_of_expr el) ^ "}"
+  (* | Array(el) -> "[" ^ "]" *)
   | Binop(e1, o, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
   | Unop(o, e) -> string_of_uop o ^ string_of_expr e
@@ -90,6 +98,9 @@ let string_of_typ = function
   | Bool -> "bool"
   | Float -> "float"
   | Void -> "void"
+  | Char -> "char"
+  | String -> "string"
+  | Vector -> "vec"
 
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 

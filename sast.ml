@@ -7,6 +7,9 @@ and sx =
     SLiteral of int
   | SFliteral of string
   | SBoolLit of bool
+  | SCharLit of char
+  | SStringLit of string
+  | SVecLit of sexpr list
   | SId of string
   | SBinop of sexpr * op * sexpr
   | SUnop of uop * sexpr
@@ -39,6 +42,9 @@ let rec string_of_sexpr (t, e) =
     SLiteral(l) -> string_of_int l
   | SBoolLit(true) -> "true"
   | SBoolLit(false) -> "false"
+  | SCharLit(l) -> String.make 1 l
+  | SStringLit(l) -> l
+  | SVecLit(el) -> "{" ^ String.concat ", " (List.map string_of_sexpr el) ^ "}"
   | SFliteral(l) -> l
   | SId(s) -> s
   | SBinop(e1, o, e2) ->
