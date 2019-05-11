@@ -4,9 +4,9 @@
 open Ast
 %}
 
-%token SEMI LPAREN RPAREN LBRACE RBRACE COMMA PLUS MINUS TIMES DIVIDE MOD ASSIGN
+%token SEMI LPAREN RPAREN LBRAKET RBRAKET LBRACE RBRACE COMMA PLUS MINUS TIMES DIVIDE MOD ASSIGN
 %token NOT EQ NEQ LT LEQ GT GEQ AND OR
-%token RETURN IF ELSE FOR WHILE INT BOOL FLOAT VOID CHAR STRING VECTOR
+%token RETURN IF ELSE FOR WHILE INT BOOL FLOAT VOID CHAR STRING VECTOR MATRIX
 %token <int> LITERAL
 %token <bool> BLIT
 %token <char> CLIT
@@ -61,6 +61,7 @@ typ:
   | CHAR  { Char  }
   | STRING { String }
   | VECTOR { Vector }
+  | MATRIX { Matrix }
 
 vdecl_list:
     /* nothing */    { [] }
@@ -112,8 +113,10 @@ expr:
   | ID ASSIGN expr   { Assign($1, $3)         }
   | ID LPAREN args_opt RPAREN { Call($1, $3)  }
   | LPAREN expr RPAREN { $2                   }
-  | LBRACE float_list RBRACE { VecLit($2)      }
-
+  /* | LBRACE float_list RBRACE { VecLit($2)     } */
+  | vec_lit                     { VecLit($1)     }
+  | LBRAKET id_list RBRAKET     { MatLit($2)     }
+ 
 args_opt:
     /* nothing */ { [] }
   | args_list  { List.rev $1 }
@@ -122,7 +125,15 @@ args_list:
     expr                    { [$1] }
   | args_list COMMA expr { $3 :: $1 }
 
+vec_lit:
+  LBRACE float_list RBRACE { $2 }
+
 float_list:
     FLIT	{[Fliteral($1)]}
   | float_list COMMA FLIT { Fliteral($3) :: $1 }
 
+id_list:
+    ID                    { [Id($1)]        }
+  | vec_lit               { [VecLit($1)]    }
+  | id_list COMMA ID      { Id($3) :: $1    }
+  | id_list COMMA vec_lit { VecLit($3) :: $1}

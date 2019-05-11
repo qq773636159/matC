@@ -100,12 +100,19 @@ let check (globals, functions) =
       | CharLit l -> (Char, SCharLit l)
       | StringLit l -> (String, SStringLit l)
       | VecLit el -> 
-	  let check_vec e = 
-		let (et, e') = expr e in
-		let err = "vector type must be float, but has type " ^ string_of_typ et
-		in if et == Float then (et, e') else raise (Failure err) in
-	  let vec' = List.map check_vec el
-	  in (Vector, SVecLit vec')
+	      let check_vec e = 
+		      let (et, e') = expr e in
+		      let err = "vector type must be float, but has type " ^ string_of_typ et
+		      in if et == Float then (et, e') else raise (Failure err) in
+	      let vec' = List.map check_vec el
+	        in (Vector, SVecLit vec')
+      | MatLit el -> 
+        let check_mat e = 
+          let (et, e') = expr e in
+          let err = "elements in matrix must be vectors " ^ string_of_typ et
+          in if et == Vector then (et, e') else raise (Failure err) in
+        let mat' = List.map check_mat el
+          in (Matrix, SMatLit mat')
       | Noexpr     -> (Void, SNoexpr)
       | Id s       -> (type_of_identifier s, SId s)
       | Assign(var, e) as ex -> 
