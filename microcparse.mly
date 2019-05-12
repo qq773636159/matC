@@ -4,7 +4,8 @@
 open Ast
 %}
 
-%token SEMI LPAREN RPAREN LBRAKET RBRAKET LBRACE RBRACE COMMA PLUS MINUS TIMES DIVIDE MOD ASSIGN
+%token SEMI LPAREN RPAREN LBRACE RBRACE COMMA LBRACK RBRACK
+%token PLUS MINUS TIMES DIVIDE MOD ASSIGN
 %token NOT EQ NEQ LT LEQ GT GEQ AND OR
 %token RETURN IF ELSE FOR WHILE INT BOOL FLOAT VOID CHAR STRING VECTOR MATRIX
 %token <int> LITERAL
@@ -60,8 +61,8 @@ typ:
   | VOID  { Void  }
   | CHAR  { Char  }
   | STRING { String }
-  | VECTOR { Vector }
-  | MATRIX { Matrix }
+  | VECTOR LT LITERAL GT { Vector($3) }
+  | MATRIX LT LITERAL COMMA LITERAL GT { Matrix($3, $5) }
 
 vdecl_list:
     /* nothing */    { [] }
@@ -99,7 +100,7 @@ expr:
   | expr MINUS  expr { Binop($1, Sub,   $3)   }
   | expr TIMES  expr { Binop($1, Mult,  $3)   }
   | expr DIVIDE expr { Binop($1, Div,   $3)   }
-  | expr MOD	expr { Binop($1, Mod,	$3)   }
+  | expr MOD	expr   { Binop($1, Mod,	$3)     }
   | expr EQ     expr { Binop($1, Equal, $3)   }
   | expr NEQ    expr { Binop($1, Neq,   $3)   }
   | expr LT     expr { Binop($1, Less,  $3)   }
@@ -113,10 +114,9 @@ expr:
   | ID ASSIGN expr   { Assign($1, $3)         }
   | ID LPAREN args_opt RPAREN { Call($1, $3)  }
   | LPAREN expr RPAREN { $2                   }
-  /* | LBRACE float_list RBRACE { VecLit($2)     } */
-  | vec_lit                     { VecLit($1)     }
-  | LBRAKET id_list RBRAKET     { MatLit($2)     }
- 
+  | vec_lit          { VecLit($1)             }
+  | mat_lit          { MatLit($1)             }
+
 args_opt:
     /* nothing */ { [] }
   | args_list  { List.rev $1 }
@@ -129,11 +129,12 @@ vec_lit:
   LBRACE float_list RBRACE { $2 }
 
 float_list:
-    FLIT	{[Fliteral($1)]}
-  | float_list COMMA FLIT { Fliteral($3) :: $1 }
+    FLIT	                {  [Fliteral($1)]    }
+  | FLIT COMMA float_list { Fliteral($1) :: $3 }
 
-id_list:
-    ID                    { [Id($1)]        }
-  | vec_lit               { [VecLit($1)]    }
-  | id_list COMMA ID      { Id($3) :: $1    }
-  | id_list COMMA vec_lit { VecLit($3) :: $1}
+mat_lit:
+  LBRACE float_list_list RBRACE   { $2  }
+
+float_list_list:
+    LBRACE float_list RBRACE  { [$2] }
+  | LBRACE float_list RBRACE SEMI float_list_list { $2 :: $5 }
