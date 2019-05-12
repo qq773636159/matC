@@ -10,7 +10,7 @@ and sx =
   | SCharLit of char
   | SStringLit of string
   | SVecLit of sexpr list
-  | SMatLit of sexpr list
+  | SMatLit of sexpr list list
   | SId of string
   | SBinop of sexpr * op * sexpr
   | SUnop of uop * sexpr
@@ -46,7 +46,9 @@ let rec string_of_sexpr (t, e) =
   | SCharLit(l) -> String.make 1 l
   | SStringLit(l) -> l
   | SVecLit(el) -> "{" ^ String.concat ", " (List.map string_of_sexpr el) ^ "}"
-  | SMatLit(el) -> "[" ^ String.concat ", " (List.map string_of_sexpr el) ^ "]"
+  | SMatLit(ell) -> "{" ^ String.concat "; " 
+                  (List.map (fun el -> 
+                    "{" ^ String.concat ", " (List.map string_of_sexpr el) ^ "}") ell) ^ "}"
   | SFliteral(l) -> l
   | SId(s) -> s
   | SBinop(e1, o, e2) ->

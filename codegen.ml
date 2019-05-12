@@ -11,7 +11,6 @@ http://llvm.moe/
 http://llvm.moe/ocaml/
 
 *)
-
 module L = Llvm
 module A = Ast
 open Sast 
@@ -31,10 +30,10 @@ let translate (globals, functions) =
   and i8_t       = L.i8_type     context
   and i1_t       = L.i1_type     context
   and float_t    = L.double_type context
-  and void_t     = L.void_type   context in
-  (* and array_t	 = L.array_type  context in *)
+  and void_t     = L.void_type   context  in
 
-  let string_t   = L.pointer_type i8_t in
+  let string_t   = L.pointer_type i8_t 
+  and array_t    = L.array_type           in
 
   (* Return the LLVM type for a MicroC type *)
   let ltype_of_typ = function
@@ -44,7 +43,16 @@ let translate (globals, functions) =
     | A.Void  -> void_t
     | A.Char  -> i8_t
     | A.String -> string_t
+    | A.Vector(n) -> array_t float_t n 
+    | A.Matrix(r, c) -> array_t (array_t float_t c) r
   in
+
+  (* split helper function *)
+  let split s = 
+    let len = (String.length s) - 2 in
+    let subs = String.sub s 1 len in
+    let l = String.split_on_char ',' subs in
+    List.map (fun x -> float_of_string x) l in
 
   (* Create a map of global variables after creating each *)
   let global_vars : L.llvalue StringMap.t =
@@ -116,7 +124,7 @@ let translate (globals, functions) =
 
     (* Construct code for an expression; return its value *)
     let rec expr builder ((_, e) : sexpr) = match e with
-	SLiteral i  -> L.const_int i32_t i
+	      SLiteral i  -> L.const_int i32_t i
       | SBoolLit b  -> L.const_int i1_t (if b then 1 else 0)
       | SCharLit c  -> L.const_int i8_t (int_of_char c)
       | SStringLit s -> L.build_global_stringptr s "str" builder
@@ -125,6 +133,22 @@ let translate (globals, functions) =
       | SId s       -> L.build_load (lookup s) s builder
       | SAssign (s, e) -> let e' = expr builder e in
                           ignore(L.build_store e' (lookup s) builder); e'
+      | SVecLit v   -> L.const_array float_t (Array.of_list (List.map (expr builder) v))
+      | SMatLit m   -> let realOrder=List.map List.rev m in 
+                      let i32Lists = List.map (List.map (expr builder)) realOrder in 
+                      let listOfArrays=List.map Array.of_list i32Lists in 
+                      let i32ListOfArrays = List.map (L.const_array float_t) listOfArrays in 
+                      let arrayOfArrays=Array.of_list i32ListOfArrays in 
+                      L.const_array (array_t float_t (List.length (List.hd m))) arrayOfArrays
+
+      (* | SVecLit v   -> 
+        let len = List.length v in
+        let buf = L.build_array_malloc L.double_type len "array" builder in
+        let indices = Array.of_list [const_int (i32_type context) i] in
+        let p = build_gep buf indices "array_literal" builder in
+        build_store v p builder
+      *)
+
       | SBinop ((A.Float,_ ) as e1, op, e2) ->
 	  let e1' = expr builder e1
 	  and e2' = expr builder e2 in

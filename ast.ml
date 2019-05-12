@@ -4,7 +4,7 @@ type op = Add | Sub | Mult | Div | Mod | Equal | Neq | Less | Leq | Greater | Ge
 
 type uop = Neg | Not
 
-type typ = Int | Bool | Float | Void | Char | String | Vector | Matrix
+type typ = Int | Bool | Float | Void | Char | String | Vector of int | Matrix of int * int
 
 type bind = typ * string
 
@@ -15,9 +15,8 @@ type expr =
   | CharLit of char
   | StringLit of string
   | Id of string
-  (* | Array of expr list *)
   | VecLit of expr list
-  | MatLit of expr list 
+  | MatLit of expr list list
   | Binop of expr * op * expr
   | Unop of uop * expr
   | Assign of string * expr
@@ -72,8 +71,9 @@ let rec string_of_expr = function
   | StringLit(l) -> l
   | Id(s) -> s
   | VecLit(el) -> "{" ^ String.concat ", " (List.map string_of_expr el) ^ "}"
-  | MatLit(el) -> "[" ^ String.concat "," (List.map string_of_expr el) ^ "]"
-  (* | Array(el) -> "[" ^ "]" *)
+  | MatLit(ell) -> "{" ^ String.concat "; " 
+                  (List.map (fun el -> 
+                    "{" ^ String.concat ", " (List.map string_of_expr el) ^ "}") ell) ^ "}"
   | Binop(e1, o, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
   | Unop(o, e) -> string_of_uop o ^ string_of_expr e
@@ -102,8 +102,8 @@ let string_of_typ = function
   | Void -> "void"
   | Char -> "char"
   | String -> "string"
-  | Vector -> "vec"
-  | Matrix -> "mat" 
+  | Vector(n) -> "vec <" ^ string_of_int n ^ ">"
+  | Matrix(r, c) -> "mat <" ^ string_of_int r ^ ", " ^ string_of_int c ^ ">"
 
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 

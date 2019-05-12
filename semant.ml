@@ -78,7 +78,12 @@ let check (globals, functions) =
     (* Raise an exception if the given rvalue type cannot be assigned to
        the given lvalue type *)
     let check_assign lvaluet rvaluet err =
-       if lvaluet = rvaluet then lvaluet else raise (Failure err)
+      match (lvaluet, rvaluet) with
+        | (Matrix(r1, c1), Matrix(r2, c2)) -> if r1 == r2 then 
+                                                if c1 == c2 then lvaluet else raise (Failure err)
+                                              else raise (Failure err)
+        | (Vector(n1), Vector(n2)) -> if n1 == n2 then lvaluet else raise (Failure err)
+        | _ -> if lvaluet = rvaluet then lvaluet else raise (Failure err)
     in   
 
     (* Build local symbol table of variables for this function *)
@@ -105,14 +110,23 @@ let check (globals, functions) =
 		      let err = "vector type must be float, but has type " ^ string_of_typ et
 		      in if et == Float then (et, e') else raise (Failure err) in
 	      let vec' = List.map check_vec el
-	        in (Vector, SVecLit vec')
-      | MatLit el -> 
-        let check_mat e = 
+	      in (Vector(List.length el), SVecLit vec')
+      | MatLit ell -> 
+        let check_el e =
           let (et, e') = expr e in
-          let err = "elements in matrix must be vectors " ^ string_of_typ et
-          in if et == Vector then (et, e') else raise (Failure err) in
-        let mat' = List.map check_mat el
-          in (Matrix, SMatLit mat')
+          let err = "type must be float, but has type " ^ string_of_typ et
+          in if et == Float then (et, e') else raise (Failure err) in
+        let check_row r = List.map (fun el -> check_el el) r in
+        let check_col_num rows = List.fold_left (fun n nxt -> let len = List.length nxt in
+                                                  if len == n then len
+                                                  else raise (Failure "each row mush have same length")
+                                                ) (List.length (List.hd rows)) rows
+        in
+        let n_c = check_col_num ell in
+        let n_r = List.length ell in
+        let allrows = List.map check_row ell in
+        (Matrix(n_r, n_c), SMatLit allrows)
+          
       | Noexpr     -> (Void, SNoexpr)
       | Id s       -> (type_of_identifier s, SId s)
       | Assign(var, e) as ex -> 
